@@ -1,13 +1,9 @@
 "use client";
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { isAdminEmail } from "@/lib/admin";
 import { deleteRemoteAd, listAllAds, listRemoteBrands, upsertBrand } from "@/lib/catalog";
 import { BOARD_ID, DURATIONS, activeAnnouncements, emptyBoard, listLocalAccounts, pullBoard, pushBoard, type AdminBoard } from "@/lib/adminBoard";
-import { useStore } from "@/lib/store";
 
 export default function AdminPage() {
-  const { userEmail } = useStore();
   const [board, setBoard] = useState<AdminBoard>(emptyBoard());
   const [ads, setAds] = useState<{ id: string; title: string; brand_name: string }[]>([]);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
@@ -18,7 +14,6 @@ export default function AdminPage() {
     listAllAds().then(setAds).catch(() => {});
     listRemoteBrands().then((rows) => setBrands(rows.filter((b) => b.id !== BOARD_ID))).catch(() => {});
   }, []);
-  if (!isAdminEmail(userEmail)) return <div className="rounded-2xl border bg-white p-6 text-sm">Admin only. <Link href="/login" className="underline">Log in</Link></div>;
   const save = async (next: AdminBoard) => { setBoard(next); await pushBoard(next); };
   return (
     <div className="space-y-6">
