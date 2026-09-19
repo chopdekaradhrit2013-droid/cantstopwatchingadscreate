@@ -4,19 +4,15 @@ import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { Shell } from "@/components/ui";
 import GradualBlur from "@/components/GradualBlur";
-
+import { AnnouncementBar } from "@/components/AnnouncementBar";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-
-export const metadata: Metadata = {
-  title: "CAN’T STOP WATCHING ADS CREATE",
-  description: "Brand dashboard for uploading and managing advertisements.",
-};
-
+export const metadata: Metadata = { title: "CAN'T STOP WATCHING ADS CREATE", description: "Brand dashboard for uploading and managing advertisements." };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={`${geist.variable} font-sans antialiased`}>
         <StoreProvider>
+          <AnnouncementBar />
           <Shell>{children}</Shell>
           <GradualBlur target="page" position="bottom" height="6rem" strength={2} divCount={5} curve="bezier" exponential opacity={1} />
         </StoreProvider>
