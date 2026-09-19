@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { isAdminEmail } from "@/lib/admin";
 import { useStore } from "@/lib/store";
@@ -28,9 +28,15 @@ export function StatusBadge({ status }: { status: VerificationStatus | string })
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { brand, userEmail, logout, verification } = useStore();
   const [open, setOpen] = useState(false);
   const links = isAdminEmail(userEmail) ? baseLinks : baseLinks.filter((l) => l.href !== "/admin");
+  function doLogout() {
+    logout();
+    setOpen(false);
+    router.push("/login");
+  }
   const nav = (
     <nav className="flex flex-col gap-1 text-sm">
       {links.map((l) => {
@@ -41,6 +47,11 @@ export function Sidebar() {
           </Link>
         );
       })}
+      {userEmail ? (
+        <button type="button" onClick={doLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-red-600 hover:bg-red-50">Log out</button>
+      ) : (
+        <Link href="/login" onClick={() => setOpen(false)} className="mt-2 rounded-lg px-3 py-2">Log in</Link>
+      )}
     </nav>
   );
   return (
@@ -54,7 +65,6 @@ export function Sidebar() {
           <p className="font-medium text-neutral-800">{brand.name} {verification.status === "verified" ? "✓" : ""}</p>
           <StatusBadge status={verification.status} />
           <p className="mt-1">{userEmail ?? "Guest"}</p>
-          {userEmail ? <button type="button" onClick={logout} className="mt-2 underline">Log out</button> : <Link href="/login" className="mt-2 block underline">Log in</Link>}
         </div>
       </aside>
       <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 md:hidden">
