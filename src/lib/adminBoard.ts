@@ -12,10 +12,11 @@ export const DURATIONS = [
 ];
 export type Announcement = { id: string; text: string; until: string };
 export type PlanGrant = { email: string; plan: "plus" | "premium" };
-export type PayClaim = { id: string; email: string; plan: "plus" | "premium"; amount: number; at: string; status: "pending" | "approved" | "rejected" };
+export type PayClaim = { id: string; email: string; plan: "plus" | "premium"; amount: number; note: string; at: string; status: "pending" | "approved" | "rejected" };
+export type InboxItem = { id: string; message: string; createdAt: string; read: boolean };
 export type LocalAccount = { email: string; password: string; phone?: string; kind: "user" | "brand" };
-export type AdminBoard = { announcements: Announcement[]; bannedEmails: string[]; bannedPhones: string[]; bannedBrandIds: string[]; grants: PlanGrant[]; claims: PayClaim[] };
-export const emptyBoard = (): AdminBoard => ({ announcements: [], bannedEmails: [], bannedPhones: [], bannedBrandIds: [], grants: [], claims: [] });
+export type AdminBoard = { announcements: Announcement[]; bannedEmails: string[]; bannedPhones: string[]; bannedBrandIds: string[]; grants: PlanGrant[]; claims: PayClaim[]; inbox: InboxItem[] };
+export const emptyBoard = (): AdminBoard => ({ announcements: [], bannedEmails: [], bannedPhones: [], bannedBrandIds: [], grants: [], claims: [], inbox: [] });
 export function readLocalBoard(): AdminBoard {
   if (typeof window === "undefined") return emptyBoard();
   try { return { ...emptyBoard(), ...JSON.parse(localStorage.getItem(BOARD_KEY) || "{}") }; } catch { return emptyBoard(); }
