@@ -4,8 +4,9 @@ import { defaultBrand } from "./seed";
 import type { Advertisement, BrandProfile, BrandVerification, Category, ImpersonationReport, NotificationItem, PlanId } from "./types";
 import { PLAN_LIMITS, emptyVerification } from "./types";
 import { deleteRemoteAd, listBrandAds, toRow, upsertAd, upsertBrand } from "./catalog";
+import { pullBoard } from "./adminBoard";
 
-const KEY = "cswa-create-v5";
+const KEY = "cswa-create-v6";
 
 type State = {
   userEmail: string | null;
@@ -20,7 +21,7 @@ const initial: State = {
   userEmail: null,
   brand: defaultBrand,
   ads: [],
-  plan: "plus",
+  plan: "free",
   notifications: [],
   verification: emptyVerification(),
   reports: [],
@@ -86,7 +87,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        setState({ ...initial, ...parsed, verification: { ...emptyVerification(), ...(parsed.verification ?? {}) }, ads: [] });
+        setState({ ...initial, ...parsed, plan: parsed.plan === "plus" || parsed.plan === "premium" ? parsed.plan : "free", verification: { ...emptyVerification(), ...(parsed.verification ?? {}) }, ads: [] });
       }
     } catch {}
     setReady(true);
@@ -97,6 +98,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     listBrandAds(state.brand.id).then((rows) => setState((s) => ({ ...s, ads: mapRows(rows) }))).catch(() => {});
     pushBrand(state.brand, state.verification.status);
   }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ready || !state.userEmail) return;
+    pullBoard().then((board) => {
+      const g = board.grants.find((x) => x.email.toLowerCase() === state.userEmail!.toLowerCase());
+      if (g) setState((s) => ({ ...s, plan: g.plan }));
+    }).catch(() => {});
+  }, [ready, state.userEmail]);
 
   const publishedThisMonth = countPublished(state.ads);
   const limit = PLAN_LIMITS[state.plan];
@@ -108,7 +116,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const brand = { ...s.brand, name: p.name, handle, email: p.email, contactEmail: p.email, industry: p.industry, website: p.website, logo: p.logo || s.brand.logo };
       const verification = { ...s.verification, brandName: p.name, officialWebsite: p.website, businessEmail: p.email, category: p.industry, status: "unverified" as const };
       pushBrand(brand, "unverified");
-      return { ...s, userEmail: p.email, brand, verification };
+      return { ...s, userEmail: p.email, brand, verification, plan: "free" };
     });
   }, []);
   const login = useCallback((email: string) => setState((s) => ({ ...s, userEmail: email })), []);
