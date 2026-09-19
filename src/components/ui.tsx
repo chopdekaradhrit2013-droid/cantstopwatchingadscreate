@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { isAdminEmail } from "@/lib/admin";
 import { useStore } from "@/lib/store";
@@ -28,15 +28,9 @@ export function StatusBadge({ status }: { status: VerificationStatus | string })
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { brand, userEmail, logout, verification } = useStore();
+  const { brand, userEmail, verification } = useStore();
   const [open, setOpen] = useState(false);
   const links = isAdminEmail(userEmail) ? baseLinks : baseLinks.filter((l) => l.href !== "/admin");
-  function doLogout() {
-    logout();
-    setOpen(false);
-    router.push("/login");
-  }
   const nav = (
     <nav className="flex flex-col gap-1 text-sm">
       {links.map((l) => {
@@ -48,7 +42,7 @@ export function Sidebar() {
         );
       })}
       {userEmail ? (
-        <button type="button" onClick={doLogout} className="mt-2 rounded-lg px-3 py-2 text-left text-red-600 hover:bg-red-50">Log out</button>
+        <a href="/logout" className="mt-2 rounded-lg px-3 py-2 text-left text-red-600 hover:bg-red-50">Log out</a>
       ) : (
         <Link href="/login" onClick={() => setOpen(false)} className="mt-2 rounded-lg px-3 py-2">Log in</Link>
       )}
@@ -78,7 +72,7 @@ export function Sidebar() {
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  if (["/login", "/signup", "/forgot"].includes(path)) return <div className="min-h-screen px-4 py-10">{children}</div>;
+  if (["/login", "/signup", "/forgot", "/logout"].includes(path)) return <div className="min-h-screen px-4 py-10">{children}</div>;
   return (
     <div className="min-h-screen md:flex">
       <Sidebar />
