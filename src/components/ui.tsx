@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { isAdminEmail } from "@/lib/admin";
 import { useStore } from "@/lib/store";
 import type { VerificationStatus } from "@/lib/types";
 
-const links = [
+const baseLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/ads", label: "My Ads" },
   { href: "/upload", label: "Upload Ad" },
@@ -15,6 +16,7 @@ const links = [
   { href: "/notifications", label: "Notifications" },
   { href: "/subscription", label: "Subscription" },
   { href: "/settings", label: "Settings" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export function StatusBadge({ status }: { status: VerificationStatus | string }) {
@@ -28,6 +30,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { brand, userEmail, logout, verification } = useStore();
   const [open, setOpen] = useState(false);
+  const links = isAdminEmail(userEmail) ? baseLinks : baseLinks.filter((l) => l.href !== "/admin");
   const nav = (
     <nav className="flex flex-col gap-1 text-sm">
       {links.map((l) => {
