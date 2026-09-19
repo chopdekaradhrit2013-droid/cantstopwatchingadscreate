@@ -5,7 +5,7 @@ import type { Advertisement, BrandProfile, BrandVerification, Category, Imperson
 import { PLAN_LIMITS, emptyVerification } from "./types";
 import { deleteRemoteAd, listBrandAds, toRow, upsertAd, upsertBrand } from "./catalog";
 
-const KEY = "cswa-create-v4";
+const KEY = "cswa-create-v5";
 
 type State = {
   userEmail: string | null;
@@ -23,9 +23,7 @@ const initial: State = {
   plan: "plus",
   notifications: [],
   verification: emptyVerification(),
-  reports: [
-    { id: "1042", reason: "Brand impersonation", advertisement: "Example Product Launch", adId: "demo", status: "under_review", createdAt: new Date().toISOString() },
-  ],
+  reports: [],
 };
 
 type AdInput = Omit<Advertisement, "id" | "brandId" | "brandName" | "createdAt" | "views" | "likes" | "saves" | "clicks">;
