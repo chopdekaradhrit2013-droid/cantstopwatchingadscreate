@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { AD_STYLES, CATEGORIES, type AdStatus, type AdStyle, type Category } from "@/lib/types";
 
 function UploadInner() {
-  const { ads, addAd, updateAd, publishedThisMonth, limit, plan } = useStore();
+  const { ads, addAd, updateAd, publishedThisMonth, limit, plan, isVerified } = useStore();
   const router = useRouter();
   const params = useSearchParams();
   const existing = ads.find((a) => a.id === params.get("edit"));
@@ -18,7 +18,7 @@ function UploadInner() {
   const [product, setProduct] = useState("");
   const [cta, setCta] = useState("Learn more");
   const [destinationUrl, setDestinationUrl] = useState("https://example.com");
-  const [status, setStatus] = useState<AdStatus>("published");
+  const [status, setStatus] = useState<AdStatus>("draft");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -38,9 +38,16 @@ function UploadInner() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (status === "published" && !isVerified) {
+      setError("unverified");
+      return;
+    }
     const payload = { title, description, media, category, style, product, cta, destinationUrl, status };
     const result = existing ? updateAd(existing.id, payload) : addAd(payload);
-    if (!result.ok) { setError("You’ve reached your monthly advertisement limit."); return; }
+    if (!result.ok) {
+      setError(result.reason === "unverified" ? "unverified" : "limit");
+      return;
+    }
     router.push("/ads");
   }
 
@@ -49,9 +56,11 @@ function UploadInner() {
       <div>
         <h1 className="text-2xl font-semibold">{existing ? "Edit advertisement" : "Upload Ad"}</h1>
         <p className="text-sm text-neutral-500">{plan.toUpperCase()} · {publishedThisMonth} / {limit} advertisements used this month</p>
-        {publishedThisMonth >= limit && (
+        {!isVerified && (
           <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
-            You’ve reached your monthly advertisement limit. <Link href="/subscription" className="underline">Upgrade Plan</Link>
+            <p className="font-medium">Business verification required</p>
+            <p className="mt-1">Verify your business before publishing advertisements on CAN’T STOP WATCHING ADS.</p>
+            <Link href="/verify" className="mt-2 inline-block rounded-full bg-neutral-900 px-3 py-1.5 text-xs text-white">Verify Business</Link>
           </div>
         )}
         <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-neutral-200 bg-white p-5">
@@ -66,9 +75,16 @@ function UploadInner() {
           <label className="block text-sm">Brand / product<input value={product} onChange={(e) => setProduct(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
           <label className="block text-sm">CTA text<input value={cta} onChange={(e) => setCta(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
           <label className="block text-sm">Destination URL<input type="url" value={destinationUrl} onChange={(e) => setDestinationUrl(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
-          <label className="block text-sm">Status<select value={status} onChange={(e) => setStatus(e.target.value as AdStatus)} className="mt-1 w-full rounded-xl border px-3 py-2"><option value="published">Published</option><option value="draft">Draft</option><option value="scheduled">Scheduled</option></select></label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="rounded-full bg-neutral-900 px-5 py-2 text-sm text-white">{status === "published" ? "Publish Advertisement" : "Save"}</button>
+          <label className="block text-sm">Status<select value={status} onChange={(e) => setStatus(e.target.value as AdStatus)} className="mt-1 w-full rounded-xl border px-3 py-2"><option value="draft">Draft</option><option value="scheduled">Scheduled</option><option value="published">Published</option></select></label>
+          {error === "unverified" && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
+              <p className="font-medium">Business verification required</p>
+              <p className="mt-1">Verify your business before publishing advertisements on CAN’T STOP WATCHING ADS.</p>
+              <Link href="/verify" className="mt-2 inline-block rounded-full bg-neutral-900 px-3 py-1.5 text-xs text-white">Verify Business</Link>
+            </div>
+          )}
+          {error === "limit" && <p className="text-sm text-red-600">You’ve reached your monthly advertisement limit.</p>}
+          <button type="submit" className="rounded-full bg-neutral-900 px-5 py-2 text-sm text-white">{status === "published" ? "Publish Advertisement" : "Save draft"}</button>
         </form>
       </div>
       <aside className="h-fit rounded-2xl border border-neutral-200 bg-white p-4">
