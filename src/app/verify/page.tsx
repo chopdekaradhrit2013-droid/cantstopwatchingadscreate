@@ -4,6 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIES, type Category, type VerificationMethod } from "@/lib/types";
 import { useStore } from "@/lib/store";
+
+function host(url: string) {
+  try { return new URL(url.startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+function emailDomain(email: string) {
+  return (email.split("@")[1] || "").toLowerCase();
+}
+
 export default function VerifyPage() {
   const { brand, verification, saveBusinessInfo, simulateWebsite, simulateEmail, submitDocuments } = useStore();
   const router = useRouter();
@@ -14,6 +22,8 @@ export default function VerifyPage() {
   const [email, setEmail] = useState(verification.businessEmail || brand.email);
   const [step, setStep] = useState<"info" | VerificationMethod>("info");
   const [docName, setDocName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
 
   function continueInfo(e: React.FormEvent) {
     e.preventDefault();
@@ -21,12 +31,39 @@ export default function VerifyPage() {
     setStep("website");
   }
 
+  async function checkSite() {
+    setBusy(true); setMsg("");
+    try {
+      const res = await fetch("/api/verify-site", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ website, code: verification.websiteCode }),
+      });
+      const data = await res.json();
+      if (data.ok) { simulateWebsite(); router.push("/verification"); }
+      else setMsg(data.reason === "unreachable" ? "Could not reach that website." : "Code not found on the site yet. Add it and try again.");
+    } catch {
+      setMsg("Check failed. Try again.");
+    }
+    setBusy(false);
+  }
+
+  function checkEmail() {
+    const siteHost = host(website);
+    const mailHost = emailDomain(email);
+    if (siteHost && mailHost && (mailHost === siteHost || mailHost.endsWith("." + siteHost))) {
+      simulateEmail();
+      router.push("/verification");
+      return;
+    }
+    setMsg("Email domain must match your website (e.g. hello@yourbrand.com).");
+  }
+
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Demo Verification — automated verification will be connected later.</p>
       <div>
         <h1 className="text-2xl font-semibold">Verify Your Business</h1>
-        <p className="mt-1 text-sm text-neutral-500">Verification helps us confirm that you are authorized to represent this business.</p>
+        <p className="mt-1 text-sm text-neutral-500">Automated checks — no demo simulate buttons.</p>
       </div>
       {step === "info" && (
         <form onSubmit={continueInfo} className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
@@ -41,7 +78,7 @@ export default function VerifyPage() {
       {step !== "info" && (
         <div className="flex flex-wrap gap-2 text-xs">
           {([["website","Website"],["email","Business email"],["documents","Documents"]] as const).map(([k,l]) => (
-            <button key={k} type="button" onClick={() => setStep(k)} className={`rounded-full px-3 py-1.5 ${step===k?"bg-neutral-900 text-white":"border"}`}>{l}</button>
+            <button key={k} type="button" onClick={() => { setMsg(""); setStep(k); }} className={`rounded-full px-3 py-1.5 ${step===k?"bg-neutral-900 text-white":"border"}`}>{l}</button>
           ))}
         </div>
       )}
@@ -49,30 +86,32 @@ export default function VerifyPage() {
         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Recommended</p>
           <h2 className="font-semibold">Website verification</h2>
-          <p className="text-sm text-neutral-600">Add this verification code to your website or verification page to prove that you control this domain.</p>
+          <p className="text-sm text-neutral-600">Put this exact code anywhere on your homepage (footer text is fine). Then we fetch the page and look for it.</p>
           <p className="rounded-xl bg-neutral-100 px-3 py-2 font-mono text-sm">{verification.websiteCode}</p>
-          <p className="text-xs text-neutral-500">Site: {website || "https://example.com"}</p>
-          <button type="button" onClick={() => { simulateWebsite(); router.push("/verification"); }} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Simulate Website Verification</button>
+          <p className="text-xs text-neutral-500">Site: {website}</p>
+          {msg && <p className="text-sm text-red-600">{msg}</p>}
+          <button type="button" disabled={busy} onClick={checkSite} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">{busy ? "Checking…" : "Check website now"}</button>
         </div>
       )}
       {step === "email" && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
           <h2 className="font-semibold">Business email</h2>
-          <p className="text-sm text-neutral-600">We’ll send a verification link to your official business email. Demo only — no real email is sent.</p>
-          <p className="text-sm">Verification email sent to {email || "hello@example.com"}</p>
-          <button type="button" onClick={() => { simulateEmail(); router.push("/verification"); }} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Simulate Email Verification</button>
+          <p className="text-sm text-neutral-600">Auto-pass if the email domain matches your website domain.</p>
+          <p className="text-sm">{email} · {website}</p>
+          {msg && <p className="text-sm text-red-600">{msg}</p>}
+          <button type="button" onClick={checkEmail} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Verify email domain</button>
         </div>
       )}
       {step === "documents" && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold">Verify with Business Documents</h2>
-          <p className="text-sm text-neutral-600">Business registration, GST, Udyam, or other official documentation. Documents are not actually reviewed in this demo.</p>
+          <h2 className="font-semibold">Documents</h2>
+          <p className="text-sm text-neutral-600">GST / Udyam / registration still needs a human look. Submit and it goes pending for Admin.</p>
           <input type="file" onChange={(e) => setDocName(e.target.files?.[0]?.name ?? "")} className="block w-full text-sm" />
           {docName && <p className="text-xs text-neutral-500">Selected: {docName}</p>}
           <button type="button" onClick={() => { submitDocuments(); router.push("/verification"); }} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Submit for review</button>
         </div>
       )}
-      <Link href="/" className="inline-block text-sm text-neutral-500 underline">Skip for now and explore dashboard</Link>
+      <Link href="/" className="inline-block text-sm text-neutral-500 underline">Skip for now</Link>
     </div>
   );
 }
