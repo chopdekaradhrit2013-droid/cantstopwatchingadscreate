@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CATEGORIES, type Category, type VerificationMethod } from "@/lib/types";
 import { useStore } from "@/lib/store";
 
-const SITE_CODE = "CSWA-VERIFY-ADHRIT";
+const SITE_CODE = "CSWA-78956";
 
 function host(url: string) {
   try { return new URL(url.startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, ""); } catch { return ""; }
@@ -65,7 +65,6 @@ export default function VerifyPage() {
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Verify Your Business</h1>
-        <p className="mt-1 text-sm text-neutral-500">Automated checks.</p>
       </div>
       {step === "info" && (
         <form onSubmit={continueInfo} className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
@@ -73,7 +72,7 @@ export default function VerifyPage() {
           <label className="block text-sm">Brand / display name<input required value={display} onChange={(e) => setDisplay(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
           <label className="block text-sm">Official website<input required value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://cantstopwatchingads.vercel.app" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
           <label className="block text-sm">Business category<select value={category} onChange={(e) => setCategory(e.target.value as Category)} className="mt-1 w-full rounded-xl border px-3 py-2">{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></label>
-          <label className="block text-sm">Business email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hello@example.com" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
+          <label className="block text-sm">Business email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
           <button type="submit" className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Continue Verification</button>
         </form>
       )}
@@ -87,16 +86,13 @@ export default function VerifyPage() {
       {step === "website" && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
           <h2 className="font-semibold">Website verification</h2>
-          <p className="text-sm text-neutral-600">Temporary footer code on the viewer site:</p>
           <p className="rounded-xl bg-neutral-100 px-3 py-2 font-mono text-sm">{SITE_CODE}</p>
-          <p className="text-xs text-neutral-500">Use https://cantstopwatchingads.vercel.app as the website.</p>
           {msg && <p className="text-sm text-red-600">{msg}</p>}
           <button type="button" disabled={busy} onClick={checkSite} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">{busy ? "Checking…" : "Check website now"}</button>
         </div>
       )}
       {step === "email" && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold">Business email</h2>
           <p className="text-sm">{email} · {website}</p>
           {msg && <p className="text-sm text-red-600">{msg}</p>}
           <button type="button" onClick={checkEmail} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Verify email domain</button>
@@ -104,9 +100,7 @@ export default function VerifyPage() {
       )}
       {step === "documents" && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-5">
-          <h2 className="font-semibold">Documents</h2>
           <input type="file" onChange={(e) => setDocName(e.target.files?.[0]?.name ?? "")} className="block w-full text-sm" />
-          {docName && <p className="text-xs text-neutral-500">Selected: {docName}</p>}
           <button type="button" onClick={() => { submitDocuments(); router.push("/verification"); }} className="rounded-full bg-neutral-900 px-4 py-2 text-sm text-white">Submit for review</button>
         </div>
       )}
