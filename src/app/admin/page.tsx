@@ -16,12 +16,19 @@ export default function AdminPage() {
   const [text, setText] = useState("");
   const [dur, setDur] = useState(DURATIONS[2].ms);
   const allowed = isAdminEmail(userEmail);
+  const pending = (board.claims || []).filter((c) => c.status === "pending");
+  const unread = (board.inbox || []).filter((n) => !n.read);
 
   useEffect(() => {
     if (!allowed) return;
-    pullBoard().then(setBoard).catch(() => {});
-    listAllAds().then(setAds).catch(() => {});
-    listRemoteBrands().then((rows) => setBrands(rows.filter((b) => b.id !== BOARD_ID))).catch(() => {});
+    const load = () => {
+      pullBoard().then(setBoard).catch(() => {});
+      listAllAds().then(setAds).catch(() => {});
+      listRemoteBrands().then((rows) => setBrands(rows.filter((b) => b.id !== BOARD_ID))).catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
   }, [allowed]);
 
   const save = async (next: AdminBoard) => { setBoard(next); await pushBoard(next); };
@@ -47,6 +54,22 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Admin console</h1>
+      {(pending.length > 0 || unread.length > 0) && (
+        <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+          {pending.length} payment claim{pending.length === 1 ? "" : "s"} waiting · {unread.length} unread
+        </p>
+      )}
+      <section className="rounded-2xl border bg-white p-5 space-y-2">
+        <h2 className="font-semibold">Notifications</h2>
+        {(board.inbox || []).length === 0 && <p className="text-sm text-neutral-500">No payment notifications yet. They appear here when someone taps I paid.</p>}
+        {(board.inbox || []).map((n) => (
+          <div key={n.id} className={`rounded-xl border px-3 py-2 text-sm ${n.read ? "opacity-50" : "bg-amber-50"}`}>
+            <p>{n.message}</p>
+            <p className="text-xs text-neutral-400">{new Date(n.createdAt).toLocaleString()}</p>
+            {!n.read && <button type="button" className="mt-1 text-xs underline" onClick={() => save({ ...board, inbox: board.inbox.map((x) => x.id === n.id ? { ...x, read: true } : x) })}>Mark read</button>}
+          </div>
+        ))}
+      </section>
       <section className="rounded-2xl border bg-white p-5 space-y-2">
         <h2 className="font-semibold">Payment claims</h2>
         <p className="text-xs text-neutral-500">Match FamPay remark to the note code, then approve.</p>
