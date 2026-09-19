@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui";
+import { emptyBoard, pullBoard, pushBoard } from "@/lib/adminBoard";
 import { FAMPAY_UPI, PLAN_PRICE, couponOff, payable, qrUrl, upiLink } from "@/lib/pay";
 import { useStore } from "@/lib/store";
 import { PLAN_LIMITS, type PlanId } from "@/lib/types";
@@ -28,10 +29,20 @@ export default function SubscriptionPage() {
     setOpen(true);
   }
 
+  async function claimPaid() {
+    if (!pending) return;
+    const board = await pullBoard().catch(() => emptyBoard());
+    await pushBoard({
+      ...board,
+      claims: [{ id: crypto.randomUUID(), email: userEmail || "unknown", plan: pending, amount, at: new Date().toISOString(), status: "pending" }, ...(board.claims || [])],
+    });
+    setDone(true);
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold">Subscription</h1>
-      <p className="mt-1 text-sm text-neutral-500">Pay with UPI / FamPay to {FAMPAY_UPI}.</p>
+      <p className="mt-1 text-sm text-neutral-500">Pay with UPI / FamPay to {FAMPAY_UPI}. Plan unlocks only after admin sees the money.</p>
       <p className="text-sm text-neutral-500">Usage: {publishedThisMonth} / {PLAN_LIMITS[plan]} · Current: {plan}</p>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {plans.map((p) => (
@@ -52,19 +63,17 @@ export default function SubscriptionPage() {
               <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Adhrit123" className="mt-1 w-full rounded-xl border px-3 py-2" />
             </label>
             {off > 0 ? <p className="text-sm text-green-700">Coupon applied: −₹{off}</p> : code.trim() ? <p className="text-sm text-red-600">Invalid coupon</p> : null}
-            <p className="text-sm">
-              {PLAN_PRICE[pending]} {off > 0 && <>− {off} = </>}<strong>₹{amount}</strong>
-            </p>
+            <p className="text-sm">{PLAN_PRICE[pending]} {off > 0 && <>− {off} = </>}<strong>₹{amount}</strong></p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrUrl(amount, note)} alt="UPI QR" className="mx-auto h-44 w-44 rounded-xl border bg-white p-2" />
             <p className="text-center text-xs text-neutral-500">{FAMPAY_UPI}</p>
             <a href={upiLink(amount, note)} className="block rounded-full bg-neutral-900 py-2 text-center text-white">Open UPI / FamPay · ₹{amount}</a>
-            <button type="button" className="w-full rounded-full border py-2" onClick={() => { setPlan(pending); setDone(true); }}>
-              I have paid — unlock {pending}
+            <button type="button" className="w-full rounded-full border py-2" onClick={claimPaid}>
+              I have paid — send for review
             </button>
           </div>
         )}
-        {done && <p>Plan set to {pending}. Paid ₹{amount}.</p>}
+        {done && <p>Claim sent. You stay on {plan} until admin confirms the FamPay credit.</p>}
       </Modal>
     </div>
   );
