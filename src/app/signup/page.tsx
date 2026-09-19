@@ -22,7 +22,7 @@ export default function SignupPage() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     signup({ name, email, industry, website, logo });
-    router.push("/");
+    router.push("/verify");
   }
   return (
     <div className="mx-auto max-w-md rounded-2xl border border-neutral-200 bg-white p-6">
