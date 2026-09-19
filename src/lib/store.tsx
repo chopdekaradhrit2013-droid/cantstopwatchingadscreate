@@ -1,14 +1,14 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { defaultBrand, seedAds, seedNotes } from "./seed";
+import { defaultBrand } from "./seed";
 import type { Advertisement, BrandProfile, Category, NotificationItem, PlanId } from "./types";
 import { PLAN_LIMITS } from "./types";
 import { deleteRemoteAd, listBrandAds, toRow, upsertAd, upsertBrand } from "./catalog";
 
-const KEY = "cswa-create-v1";
+const KEY = "cswa-create-v3";
 
 type State = { userEmail: string | null; brand: BrandProfile; ads: Advertisement[]; plan: PlanId; notifications: NotificationItem[] };
-const initial: State = { userEmail: null, brand: defaultBrand, ads: seedAds, plan: "plus", notifications: seedNotes };
+const initial: State = { userEmail: null, brand: defaultBrand, ads: [], plan: "plus", notifications: [] };
 
 type AdInput = Omit<Advertisement, "id" | "brandId" | "brandName" | "createdAt" | "views" | "likes" | "saves" | "clicks">;
 
@@ -33,7 +33,14 @@ function countPublished(ads: Advertisement[]) {
   const now = monthKey(new Date().toISOString());
   return ads.filter((a) => a.status === "published" && monthKey(a.createdAt) === now).length;
 }
-
+function mapRows(rows: Awaited<ReturnType<typeof listBrandAds>>): Advertisement[] {
+  return rows.map((r) => ({
+    id: r.id, brandId: r.brand_id, brandName: r.brand_name, title: r.title, description: r.description,
+    media: r.media, category: r.category as Advertisement["category"], style: r.style as Advertisement["style"],
+    product: r.product, cta: r.cta, destinationUrl: r.destination_url, status: r.status as Advertisement["status"],
+    createdAt: r.created_at, views: r.views, likes: r.likes, saves: r.saves, clicks: r.clicks,
+  }));
+}
 function pushBrand(b: BrandProfile) {
   upsertBrand({
     id: b.id, name: b.name, handle: b.handle, description: b.description, website: b.website,
@@ -41,31 +48,31 @@ function pushBrand(b: BrandProfile) {
     twitter: b.twitter, youtube: b.youtube, followers: b.followers,
   }).catch(() => {});
 }
+function persist(state: State) {
+  const { ads, ...rest } = state;
+  localStorage.setItem(KEY, JSON.stringify({ ...rest, ads: ads.map(({ media, ...a }) => ({ ...a, media: media.startsWith("data:") ? "" : media })) }));
+}
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>(initial);
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    try { const raw = localStorage.getItem(KEY); if (raw) setState({ ...initial, ...JSON.parse(raw) }); } catch {}
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setState({ ...initial, ...parsed, ads: [] });
+      }
+    } catch {}
     setReady(true);
   }, []);
-  useEffect(() => { if (ready) localStorage.setItem(KEY, JSON.stringify(state)); }, [state, ready]);
+  useEffect(() => { if (ready) persist(state); }, [state, ready]);
 
   useEffect(() => {
     if (!ready) return;
     listBrandAds(state.brand.id).then((rows) => {
-      if (!rows.length) return;
-      const mapped: Advertisement[] = rows.map((r) => ({
-        id: r.id, brandId: r.brand_id, brandName: r.brand_name, title: r.title, description: r.description,
-        media: r.media, category: r.category as Advertisement["category"], style: r.style as Advertisement["style"],
-        product: r.product, cta: r.cta, destinationUrl: r.destination_url, status: r.status as Advertisement["status"],
-        createdAt: r.created_at, views: r.views, likes: r.likes, saves: r.saves, clicks: r.clicks,
-      }));
-      setState((s) => {
-        const ids = new Set(mapped.map((a) => a.id));
-        return { ...s, ads: [...mapped, ...s.ads.filter((a) => !ids.has(a.id))] };
-      });
-    }).catch(() => {});
+      setState((s) => ({ ...s, ads: mapRows(rows) }));
+    }).catch(() => setState((s) => ({ ...s, ads: [] })));
     pushBrand(state.brand);
   }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
