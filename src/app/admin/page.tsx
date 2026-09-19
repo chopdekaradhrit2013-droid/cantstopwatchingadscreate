@@ -49,11 +49,11 @@ export default function AdminPage() {
       <h1 className="text-2xl font-semibold">Admin console</h1>
       <section className="rounded-2xl border bg-white p-5 space-y-2">
         <h2 className="font-semibold">Payment claims</h2>
-        <p className="text-xs text-neutral-500">Approve only after the amount is in FamPay.</p>
+        <p className="text-xs text-neutral-500">Match FamPay remark to the note code, then approve.</p>
         {(board.claims || []).length === 0 && <p className="text-sm text-neutral-500">No claims.</p>}
         {(board.claims || []).map((c) => (
           <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <span>{c.email} · {c.plan} · ₹{c.amount} · {c.status}</span>
+            <span>{c.email} · {c.plan} · ₹{c.amount} · note <b>{c.note || "—"}</b> · {c.status}</span>
             {c.status === "pending" && (
               <span className="flex gap-2">
                 <button type="button" className="text-green-700" onClick={() => save({ ...board, claims: board.claims.map((x) => x.id === c.id ? { ...x, status: "approved" } : x), grants: [...board.grants.filter((g) => g.email.toLowerCase() !== c.email.toLowerCase()), { email: c.email, plan: c.plan }] })}>Approve</button>
