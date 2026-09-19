@@ -2,11 +2,11 @@ import type { BrandProfile } from "./types";
 
 export const defaultBrand: BrandProfile = {
   id: "brand-northline",
-  name: "Northline",
-  handle: "northline",
-  email: "studio@northline.example",
-  description: "",
-  website: "",
+  name: "Tanvi Loops",
+  handle: "tanviloops",
+  email: "",
+  description: "Handmade crochet goods.",
+  website: "https://tanvi-loops.vercel.app",
   industry: "Fashion",
   logo: "",
   contactEmail: "",
