@@ -1,11 +1,19 @@
 "use client";
+import Link from "next/link";
 import { StatusBadge } from "@/components/ui";
+import { isAdminEmail } from "@/lib/admin";
 import { useStore } from "@/lib/store";
 export default function AdminPage() {
-  const { brand, verification, reports, adminApprove, adminReject, adminSuspend } = useStore();
+  const { userEmail, brand, verification, reports, adminApprove, adminReject, adminSuspend } = useStore();
+  if (!isAdminEmail(userEmail)) {
+    return (
+      <div className="rounded-2xl border bg-white p-6 text-sm">
+        Admin only. <Link href="/login" className="underline">Log in as admin</Link>
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
-      <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Demo admin — local data only. Not real KYC.</p>
       <h1 className="text-2xl font-semibold">Admin review</h1>
       <section className="rounded-2xl border border-neutral-200 bg-white p-5 text-sm">
         <h2 className="font-semibold">Brand</h2>
