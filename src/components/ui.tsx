@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
+import type { VerificationStatus } from "@/lib/types";
 
 const links = [
   { href: "/", label: "Dashboard" },
@@ -10,14 +11,22 @@ const links = [
   { href: "/upload", label: "Upload Ad" },
   { href: "/analytics", label: "Analytics" },
   { href: "/profile", label: "Brand Profile" },
+  { href: "/verification", label: "Business Verification" },
   { href: "/notifications", label: "Notifications" },
   { href: "/subscription", label: "Subscription" },
   { href: "/settings", label: "Settings" },
 ];
 
+export function StatusBadge({ status }: { status: VerificationStatus | string }) {
+  if (status === "verified") return <span className="text-xs">🟢 Verified Business ✓</span>;
+  if (status === "pending") return <span className="text-xs">🟡 Verification Pending</span>;
+  if (status === "rejected" || status === "suspended") return <span className="text-xs">🔴 {status}</span>;
+  return <span className="text-xs">🔴 Unverified</span>;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
-  const { brand, userEmail, logout } = useStore();
+  const { brand, userEmail, logout, verification } = useStore();
   const [open, setOpen] = useState(false);
   const nav = (
     <nav className="flex flex-col gap-1 text-sm">
@@ -39,8 +48,9 @@ export function Sidebar() {
         </Link>
         {nav}
         <div className="mt-auto pt-6 text-xs text-neutral-500">
-          <p className="font-medium text-neutral-800">{brand.name}</p>
-          <p>{userEmail ?? "Guest"}</p>
+          <p className="font-medium text-neutral-800">{brand.name} {verification.status === "verified" ? "✓" : ""}</p>
+          <StatusBadge status={verification.status} />
+          <p className="mt-1">{userEmail ?? "Guest"}</p>
           {userEmail ? <button type="button" onClick={logout} className="mt-2 underline">Log out</button> : <Link href="/login" className="mt-2 block underline">Log in</Link>}
         </div>
       </aside>
