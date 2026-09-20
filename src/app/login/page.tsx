@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { isAdminEmail, isAdminLogin } from "@/lib/admin";
 import { isBanned, pullBoard, rememberAccount } from "@/lib/adminBoard";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { useStore } from "@/lib/store";
 export default function LoginPage() {
   const { login, setPlan } = useStore();
@@ -16,10 +17,9 @@ export default function LoginPage() {
     if (isAdminEmail(email) && !isAdminLogin(email, password)) { setError("Wrong admin password."); return; }
     const board = await pullBoard();
     if (isBanned(board, email)) { setError("This account is banned."); return; }
-    login(email);
-    rememberAccount({ email, password, kind: "brand" });
-    const grant = board.grants.find((g) => g.email === email.trim().toLowerCase());
-    if (grant) setPlan(grant.plan);
+    const { error } = await createSupabaseBrowserClient().auth.signInWithPassword({ email: email.trim(), password });
+    if (error) { setError(error.message); return; }
+    login(email.trim());
     router.push(isAdminEmail(email) ? "/admin" : "/");
   }
   return (

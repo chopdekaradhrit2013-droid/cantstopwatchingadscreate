@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CATEGORIES, type Category } from "@/lib/types";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { useStore } from "@/lib/store";
 export default function SignupPage() {
   const { signup } = useStore();
@@ -19,10 +20,12 @@ export default function SignupPage() {
     r.onload = () => setLogo(String(r.result));
     r.readAsDataURL(file);
   }
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    signup({ name, email, industry, website, logo });
-    router.push("/verify");
+    const { data, error } = await createSupabaseBrowserClient().auth.signUp({ email: email.trim(), password, options: { data: { name, industry, website } } });
+    if (error) { alert(error.message); return; }
+    signup({ name, email: email.trim(), industry, website, logo });
+    router.push(data.session ? "/verify" : "/login");
   }
   return (
     <div className="mx-auto max-w-md rounded-2xl border border-neutral-200 bg-white p-6">

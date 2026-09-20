@@ -5,6 +5,7 @@ import type { Advertisement, BrandProfile, BrandVerification, Category, Imperson
 import { PLAN_LIMITS, emptyVerification } from "./types";
 import { deleteRemoteAd, listBrandAds, toRow, upsertAd, upsertBrand } from "./catalog";
 import { pullBoard } from "./adminBoard";
+import { createSupabaseBrowserClient } from "./supabase-browser";
 
 const KEY = "cswa-create-v6";
 
@@ -99,12 +100,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     pushBrand(state.brand, state.verification.status);
   }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!ready || !state.userEmail) return;
-    pullBoard().then((board) => {
-      const g = board.grants.find((x) => x.email.toLowerCase() === state.userEmail!.toLowerCase());
-      if (g) setState((s) => ({ ...s, plan: g.plan }));
-    }).catch(() => {});
-  }, [ready, state.userEmail]);
+    if (!ready) return;
+    const supabase = createSupabaseBrowserClient();
+    let active = true;
+    const syncUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+      if (!user) { setState((s) => ({ ...s, userEmail: null, plan: "free" })); return; }
+      const { data: profile } = await supabase.from("profiles").select("plan").eq("user_id", user.id).maybeSingle();
+      setState((s) => ({ ...s, userEmail: user.email ?? null, plan: profile?.plan === "plus" || profile?.plan === "premium" ? profile.plan : "free" }));
+    };
+    syncUser();
+    const { data: listener } = supabase.auth.onAuthStateChange(() => { syncUser(); });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, [ready]);
 
   const publishedThisMonth = countPublished(state.ads);
   const limit = PLAN_LIMITS[state.plan];
@@ -120,7 +129,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
   const login = useCallback((email: string) => setState((s) => ({ ...s, userEmail: email })), []);
-  const logout = useCallback(() => setState((s) => ({ ...s, userEmail: null })), []);
+  const logout = useCallback(() => { createSupabaseBrowserClient().auth.signOut(); setState((s) => ({ ...s, userEmail: null, plan: "free" })); }, []);
   const updateBrand = useCallback((p: Partial<BrandProfile>) => {
     setState((s) => {
       const brand = { ...s.brand, ...p };
