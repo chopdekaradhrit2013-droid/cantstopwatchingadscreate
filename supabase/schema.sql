@@ -35,4 +35,5 @@ drop policy if exists profiles_self on public.profiles;
 create policy profiles_self on public.profiles for select to authenticated using ((select auth.uid()) = user_id);
 drop policy if exists payments_self on public.payments;
 create policy payments_self on public.payments for select to authenticated using ((select auth.uid()) = user_id);
-create policy payments_insert_self on public.payments for insert to authenticated with check ((select auth.uid()) = user_id);
+-- Payment rows are created and updated only by server-side payment routes using the service role.
+drop policy if exists payments_insert_self on public.payments;

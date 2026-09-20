@@ -77,7 +77,7 @@ function pushBrand(b: BrandProfile, status: string) {
   }).catch(() => {});
 }
 function persist(state: State) {
-  const { ads, ...rest } = state;
+  const { ads, userEmail: _userEmail, plan: _plan, ...rest } = state;
   localStorage.setItem(KEY, JSON.stringify({ ...rest, ads: ads.map(({ media, ...a }) => ({ ...a, media: media.startsWith("data:") ? "" : media })) }));
 }
 
@@ -89,7 +89,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        setState({ ...initial, ...parsed, plan: parsed.plan === "plus" || parsed.plan === "premium" ? parsed.plan : "free", verification: { ...emptyVerification(), ...(parsed.verification ?? {}) }, ads: [] });
+        setState({ ...initial, ...parsed, userEmail: null, plan: "free", verification: { ...emptyVerification(), ...(parsed.verification ?? {}) }, ads: [] });
       }
     } catch {}
     setReady(true);
@@ -111,21 +111,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange(() => { syncUser(); });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [ready, refreshSubscription]);
-  useEffect(() => {
-    if (!ready) return;
-    const supabase = createSupabaseBrowserClient();
-    let active = true;
-    const syncUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!active) return;
-      if (!user) { setState((s) => ({ ...s, userEmail: null, plan: "free" })); return; }
-      const { data: profile } = await supabase.from("profiles").select("plan").eq("user_id", user.id).maybeSingle();
-      setState((s) => ({ ...s, userEmail: user.email ?? null, plan: profile?.plan === "plus" || profile?.plan === "premium" ? profile.plan : "free" }));
-    };
-    syncUser();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => { syncUser(); });
-    return () => { active = false; listener.subscription.unsubscribe(); };
-  }, [ready]);
 
   const publishedThisMonth = countPublished(state.ads);
   const limit = PLAN_LIMITS[state.plan];

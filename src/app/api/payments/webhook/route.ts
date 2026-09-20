@@ -3,12 +3,19 @@ import crypto from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { PLAN_PRICES, isPaidPlan } from "@/lib/payment-config";
 
-function signature(raw: string) { return crypto.createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET!).update(raw).digest("hex"); }
+function signature(raw: string, secret: string) { return crypto.createHmac("sha256", secret).update(raw).digest("hex"); }
+function signaturesMatch(provided: string, expected: string) {
+  const providedBuffer = Buffer.from(provided, "utf8");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  return providedBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
 export async function POST(request: Request) {
   const raw = await request.text();
   const provided = request.headers.get("x-razorpay-signature") || "";
-  if (!provided || !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(signature(raw)))) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  const payload = JSON.parse(raw);
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret || !provided || !signaturesMatch(provided, signature(raw, secret))) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  let payload: any;
+  try { payload = JSON.parse(raw); } catch { return NextResponse.json({ error: "Invalid payload" }, { status: 400 }); }
   const event = payload.event;
   const payment = payload.payload?.payment?.entity;
   const order = payload.payload?.order?.entity;

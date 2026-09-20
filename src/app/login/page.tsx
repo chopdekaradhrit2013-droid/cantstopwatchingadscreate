@@ -2,19 +2,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { isAdminEmail, isAdminLogin } from "@/lib/admin";
-import { isBanned, pullBoard, rememberAccount } from "@/lib/adminBoard";
+import { isAdminEmail } from "@/lib/admin";
+import { isBanned, pullBoard } from "@/lib/adminBoard";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { useStore } from "@/lib/store";
 export default function LoginPage() {
-  const { login, setPlan } = useStore();
+  const { login } = useStore();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isAdminEmail(email) && !isAdminLogin(email, password)) { setError("Wrong admin password."); return; }
     const board = await pullBoard();
     if (isBanned(board, email)) { setError("This account is banned."); return; }
     const { error } = await createSupabaseBrowserClient().auth.signInWithPassword({ email: email.trim(), password });
